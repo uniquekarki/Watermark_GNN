@@ -72,7 +72,7 @@ def test(model, data):
 # Function to run the training and evaluation process
 def run_experiment(dataset, er_data):
     data = dataset[0]
-    combined_data = combine_graphs(data, er_data)
+    combined_data = combine_graphs(er_data, data) #Modify this code as this attaches ER in front of the total dataset. 40% of data = training data. So actual training data for base process = (40% - ER graph nodes)
 
 
     # Split the data into training, validation, and testing
@@ -80,9 +80,11 @@ def run_experiment(dataset, er_data):
     val_mask = torch.zeros(combined_data.num_nodes, dtype=torch.bool)
     test_mask = torch.zeros(combined_data.num_nodes, dtype=torch.bool)
 
-    train_mask[:int(0.4 * combined_data.num_nodes)] = True
-    val_mask[int(0.4 * combined_data.num_nodes):int(0.6 * combined_data.num_nodes)] = True
-    test_mask[int(0.6 * combined_data.num_nodes):] = True
+    graph_nodes = er_data.num_nodes #This is used in masks as we need to split the original dataset and then attach the graph nodes to training
+
+    train_mask[:int(0.4 * combined_data.num_nodes) + graph_nodes] = True
+    val_mask[int(0.4 * combined_data.num_nodes) + graph_nodes:int(0.6 * combined_data.num_nodes) + graph_nodes] = True
+    test_mask[int(0.6 * combined_data.num_nodes) + graph_nodes:] = True
 
     combined_data.train_mask = train_mask
     combined_data.val_mask = val_mask
