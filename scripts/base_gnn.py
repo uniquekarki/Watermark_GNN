@@ -70,25 +70,32 @@ def test(model, data):
     return accuracy
 
 # Function to run the training and evaluation process
-def run_experiment(dataset, er_data):
-    data = dataset[0]
-    combined_data = combine_graphs(er_data, data) #Modify this code as this attaches ER in front of the total dataset. 40% of data = training data. So actual training data for base process = (40% - ER graph nodes)
-
+def run_experiment(dataset, dataset_name, er_data = None, watermark = False):
+    if watermark:
+        data = combine_graphs(er_data, dataset[0]) #Modify this code as this attaches ER in front of the total dataset. 40% of data = training data. So actual training data for base process = (40% - ER graph nodes)
+    else:
+        data = dataset[0]
 
     # Split the data into training, validation, and testing
-    train_mask = torch.zeros(combined_data.num_nodes, dtype=torch.bool)
-    val_mask = torch.zeros(combined_data.num_nodes, dtype=torch.bool)
-    test_mask = torch.zeros(combined_data.num_nodes, dtype=torch.bool)
+    train_mask = torch.zeros(data.num_nodes, dtype=torch.bool)
+    val_mask = torch.zeros(data.num_nodes, dtype=torch.bool)
+    test_mask = torch.zeros(data.num_nodes, dtype=torch.bool)
 
-    graph_nodes = er_data.num_nodes #This is used in masks as we need to split the original dataset and then attach the graph nodes to training
+    if watermark:
+        graph_nodes = er_data.num_nodes #This is used in masks as we need to split the original dataset and then attach the graph nodes to training
 
-    train_mask[:int(0.4 * combined_data.num_nodes) + graph_nodes] = True
-    val_mask[int(0.4 * combined_data.num_nodes) + graph_nodes:int(0.6 * combined_data.num_nodes) + graph_nodes] = True
-    test_mask[int(0.6 * combined_data.num_nodes) + graph_nodes:] = True
+        train_mask[:int(0.4 * data.num_nodes) + graph_nodes] = True
+        val_mask[int(0.4 * data.num_nodes) + graph_nodes:int(0.6 * data.num_nodes) + graph_nodes] = True
+        test_mask[int(0.6 * data.num_nodes) + graph_nodes:] = True
+    else:
+        train_mask[:int(0.4 * data.num_nodes)] = True
+        val_mask[int(0.4 * data.num_nodes):int(0.6 * data.num_nodes)] = True
+        test_mask[int(0.6 * data.num_nodes):] = True
 
-    combined_data.train_mask = train_mask
-    combined_data.val_mask = val_mask
-    combined_data.test_mask = test_mask
+
+    data.train_mask = train_mask
+    data.val_mask = val_mask
+    data.test_mask = test_mask
 
     # Initialize the model
     model = GraphSAGENet(dataset.num_features, 128, dataset.num_classes)
@@ -98,41 +105,76 @@ def run_experiment(dataset, er_data):
     # Training loop
     for epoch in range(1, 201):
         # Training step
-        loss = train(model, optimizer, criterion, combined_data)
+        loss = train(model, optimizer, criterion, data)
         if epoch % 10 == 0:
             print(f'Epoch {epoch}, Training Loss: {loss:.4f}')
 
         # Validation step
         if epoch % 10 == 0:
-            val_loss = validate(model, criterion, combined_data)
+            val_loss = validate(model, criterion, data)
             print(f'Epoch {epoch}, Validation Loss: {val_loss:.4f}')
 
+    # # Test on ER graph only
+    # er_graph_accuracy = test_on_er_graph(model, er_data)
+    # print(f'ER Graph Accuracy: {er_graph_accuracy:.4f}')
+
+    # # Testing the model
+    # accuracy = test(model, data)
+    # print(f'Test Accuracy: {accuracy:.4f}')
+
+    if watermark:
+        model_save_path = f"../models/{dataset_name}_watermarked_gnn_model.pth"
+    else:
+        model_save_path = f"../models/{dataset_name}_base_gnn_model.pth"
+    
+    torch.save(model.state_dict(), model_save_path)
+    print(f"Model saved to {model_save_path}")
+
+    return model
+
+def print_accuracy(model, data, er_data, model_name):
     # Test on ER graph only
     er_graph_accuracy = test_on_er_graph(model, er_data)
-    print(f'ER Graph Accuracy: {er_graph_accuracy:.4f}')
+    print(f'{model_name} ER Graph Accuracy: {er_graph_accuracy:.4f}')
 
     # Testing the model
-    accuracy = test(model, combined_data)
-    print(f'Test Accuracy: {accuracy:.4f}')
+    accuracy = test(model, data)
+    print(f'{model_name} Test Accuracy: {accuracy:.4f}')
 
-# Load and run the experiment for Cora dataset
-print("Running experiment on Cora dataset...")
-cora_dataset = load_dataset('Cora')
+if __name__ == "__main__":
+    models = []
 
-# Extract feature size and number of classes
-feature_size = cora_dataset.num_node_features
-num_classes = cora_dataset.num_classes
-er_data = generate_er_graph(n=10, p=0, seed=191, feature_size=feature_size, num_classes=num_classes)
+    # CORA DATASET
+    # Load and run the experiment for Cora dataset
+    print("Running experiment on Cora dataset...")
+    cora_dataset = load_dataset('Cora')
 
-run_experiment(cora_dataset, er_data)
+    # Extract feature size and number of classes
+    feature_size = cora_dataset.num_node_features
+    num_classes = cora_dataset.num_classes
+    cora_er_data = generate_er_graph(n=10, p=0, seed=191, feature_size=feature_size, num_classes=num_classes)
+    
+    cora_unmarked_model = run_experiment(cora_dataset, "cora")
+    models.append([cora_unmarked_model, cora_dataset, cora_er_data, "cora"])
 
-# Load and run the experiment for PubMed dataset
-print("\nRunning experiment on PubMed dataset...")
-pubmed_dataset = load_dataset('PubMed')
+    cora_marked_model = run_experiment(cora_dataset, "cora", cora_er_data, True)
+    models.append([cora_marked_model, cora_dataset, cora_er_data, "cora"])
 
-# Extract feature size and number of classes
-feature_size = pubmed_dataset.num_node_features
-num_classes = pubmed_dataset.num_classes
-er_data = generate_er_graph(n=10, p=0, seed=191, feature_size=feature_size, num_classes=num_classes)
+    #PUBMED DATA
+    # Load and run the experiment for PubMed dataset
+    print("\nRunning experiment on PubMed dataset...")
+    pubmed_dataset = load_dataset('PubMed')
 
-run_experiment(pubmed_dataset, er_data)
+    # Extract feature size and number of classes
+    feature_size = pubmed_dataset.num_node_features
+    num_classes = pubmed_dataset.num_classes
+    pubmed_er_data = generate_er_graph(n=10, p=0, seed=191, feature_size=feature_size, num_classes=num_classes)
+
+    pubmed_unmarked_model = run_experiment(pubmed_dataset, "pubmed")
+    models.append([pubmed_unmarked_model, pubmed_dataset, pubmed_er_data, "pubmed"])
+
+    pubmed_marked_model = run_experiment(pubmed_dataset, "pubmed", pubmed_er_data, True)
+    models.append([pubmed_marked_model, pubmed_dataset, pubmed_er_data, "pubmed"])
+
+    for model in models:
+        print_accuracy(model[0], model[1], model[2], model[3])
