@@ -152,7 +152,7 @@ if __name__ == "__main__":
     # Extract feature size and number of classes
     feature_size = cora_dataset.num_node_features
     num_classes = cora_dataset.num_classes
-    cora_er_data = generate_er_graph(n=10, p=0, seed=191, feature_size=feature_size, num_classes=num_classes)
+    cora_er_data = generate_er_graph(n=50, p=0.5, seed=191, feature_size=feature_size, num_classes=num_classes)
     
     cora_unmarked_model = run_experiment(cora_dataset, "cora")
     models.append([cora_unmarked_model, cora_dataset, cora_er_data, "cora"])
@@ -168,7 +168,7 @@ if __name__ == "__main__":
     # Extract feature size and number of classes
     feature_size = pubmed_dataset.num_node_features
     num_classes = pubmed_dataset.num_classes
-    pubmed_er_data = generate_er_graph(n=10, p=0, seed=191, feature_size=feature_size, num_classes=num_classes)
+    pubmed_er_data = generate_er_graph(n=50, p=0.5, seed=191, feature_size=feature_size, num_classes=num_classes)
 
     pubmed_unmarked_model = run_experiment(pubmed_dataset, "pubmed")
     models.append([pubmed_unmarked_model, pubmed_dataset, pubmed_er_data, "pubmed"])
