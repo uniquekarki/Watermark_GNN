@@ -114,14 +114,6 @@ def run_experiment(dataset, dataset_name, er_data = None, watermark = False):
             val_loss = validate(model, criterion, data)
             print(f'Epoch {epoch}, Validation Loss: {val_loss:.4f}')
 
-    # # Test on ER graph only
-    # er_graph_accuracy = test_on_er_graph(model, er_data)
-    # print(f'ER Graph Accuracy: {er_graph_accuracy:.4f}')
-
-    # # Testing the model
-    # accuracy = test(model, data)
-    # print(f'Test Accuracy: {accuracy:.4f}')
-
     if watermark:
         model_save_path = f"../models/{dataset_name}_watermarked_gnn_model.pth"
     else:
@@ -142,6 +134,7 @@ def print_accuracy(model, data, er_data, model_name):
     print(f'{model_name} Test Accuracy: {accuracy:.4f}')
 
 if __name__ == "__main__":
+    # List saves trained models that is used in testing
     models = []
 
     # CORA DATASET
