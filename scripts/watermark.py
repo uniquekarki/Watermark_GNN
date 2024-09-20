@@ -3,27 +3,46 @@ import networkx as nx
 from torch_geometric.utils import from_networkx
 from torch_geometric.data import Data
 
-# Generate an Erdos-Renyi Graph using networkx
-def generate_er_graph(n, p, seed, feature_size, num_classes):
-    # Generate an Erdős-Rényi graph
+def generate_er_graph(n, p, seed, feature_size, num_classes, pr):
+    # Generate ER graph
     G = nx.erdos_renyi_graph(n=n, p=p, seed=seed)
     
-    # Assign random features to nodes (size: feature_size)
-    features = torch.randn(n, feature_size).tolist()
-    nx.set_node_attributes(G, {i: features[i] for i in G.nodes()}, 'x')
+    # Initialize node features as all zeros
+    features = torch.zeros((n, feature_size))
     
-    # Assign random labels to nodes (num_classes)
-    labels = torch.randint(0, num_classes, (n,)).tolist()
-    nx.set_node_attributes(G, {i: labels[i] for i in G.nodes()}, 'y')
+    # Set a proportion of elements in the feature matrix to 1 based on pr
+    num_ones = int(pr * feature_size)  # Number of ones per node's feature vector
+    for i in range(n):
+        ones_indices = torch.randperm(feature_size)[:num_ones]  # Randomly pick indices to set to 1
+        features[i, ones_indices] = 1.0
+
+    # Set node features and random labels
+    nx.set_node_attributes(G, {i: features[i].tolist() for i in G.nodes()}, 'x')  # Features as 0/1 vectors
+    nx.set_node_attributes(G, {i: torch.randint(0, num_classes, (1,)).item() for i in G.nodes()}, 'y')  # Random labels
     
-    # Convert to PyTorch Geometric Data object
-    data = from_networkx(G)
+    return from_networkx(G)
+
+# # Generate an Erdos-Renyi Graph using networkx
+# def generate_er_graph(n, p, seed, feature_size, num_classes):
+#     # Generate an Erdős-Rényi graph
+#     G = nx.erdos_renyi_graph(n=n, p=p, seed=seed)
     
-    # Convert node attributes to tensors
-    data.x = torch.tensor([G.nodes[i]['x'] for i in G.nodes()], dtype=torch.float)
-    data.y = torch.tensor([G.nodes[i]['y'] for i in G.nodes()], dtype=torch.long)
+#     # Assign random features to nodes (size: feature_size)
+#     features = torch.randn(n, feature_size).tolist()
+#     nx.set_node_attributes(G, {i: features[i] for i in G.nodes()}, 'x')
     
-    return data
+#     # Assign random labels to nodes (num_classes)
+#     labels = torch.randint(0, num_classes, (n,)).tolist()
+#     nx.set_node_attributes(G, {i: labels[i] for i in G.nodes()}, 'y')
+    
+#     # Convert to PyTorch Geometric Data object
+#     data = from_networkx(G)
+    
+#     # Convert node attributes to tensors
+#     data.x = torch.tensor([G.nodes[i]['x'] for i in G.nodes()], dtype=torch.float)
+#     data.y = torch.tensor([G.nodes[i]['y'] for i in G.nodes()], dtype=torch.long)
+    
+#     return data
 
 # Example of augmenting Cora dataset with ER graph
 def combine_graphs(graph1, graph2):
