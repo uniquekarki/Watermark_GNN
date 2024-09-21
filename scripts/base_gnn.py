@@ -139,20 +139,20 @@ if __name__ == "__main__":
 
     # CORA DATASET
     # Load and run the experiment for Cora dataset
-    # print("Running experiment on Cora dataset...")
-    # cora_dataset = load_dataset('Cora')
+    print("Running experiment on Cora dataset...")
+    cora_dataset = load_dataset('Cora')
 
     # Extract feature size and number of classes
-    # feature_size = cora_dataset.num_node_features
-    # num_classes = cora_dataset.num_classes
-    # cora_er_data = generate_er_graph(n=100, p=0.2, seed=191, feature_size=feature_size, num_classes=num_classes, pr = 0.3)
+    feature_size = cora_dataset.num_node_features
+    num_classes = cora_dataset.num_classes
+    cora_er_data = generate_er_graph(n=100, p=0.2, seed=191, feature_size=feature_size, num_classes=num_classes, pr = 0.3)
     
-    # cora_unmarked_model = run_experiment(cora_dataset, "cora")
-    # print_accuracy(cora_unmarked_model, cora_dataset, cora_er_data, "cora")
+    cora_unmarked_model = run_experiment(cora_dataset, "cora")
+    print_accuracy(cora_unmarked_model, cora_dataset, cora_er_data, "cora")
     # models.append([cora_unmarked_model, cora_dataset, cora_er_data, "cora"])
 
-    # cora_marked_model = run_experiment(cora_dataset, "cora", cora_er_data, True)
-    # print_accuracy(cora_marked_model, cora_dataset, cora_er_data, "cora")
+    cora_marked_model = run_experiment(cora_dataset, "cora", cora_er_data, True)
+    print_accuracy(cora_marked_model, cora_dataset, cora_er_data, "cora")
 
     # models.append([cora_marked_model, cora_dataset, cora_er_data, "cora"])
 
@@ -166,8 +166,8 @@ if __name__ == "__main__":
     num_classes = pubmed_dataset.num_classes
     pubmed_er_data = generate_er_graph(n=100, p=0.2, seed=191, feature_size=feature_size, num_classes=num_classes, pr = 0.3)
 
-    # pubmed_unmarked_model = run_experiment(pubmed_dataset, "pubmed")
-    # print_accuracy(pubmed_unmarked_model, pubmed_dataset, pubmed_er_data, "pubmed")
+    pubmed_unmarked_model = run_experiment(pubmed_dataset, "pubmed")
+    print_accuracy(pubmed_unmarked_model, pubmed_dataset, pubmed_er_data, "pubmed")
     # models.append([pubmed_unmarked_model, pubmed_dataset, pubmed_er_data, "pubmed"])
 
     pubmed_marked_model = run_experiment(pubmed_dataset, "pubmed", pubmed_er_data, True)
