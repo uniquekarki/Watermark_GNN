@@ -69,13 +69,7 @@ def test(model, data):
     accuracy = int(correct.sum()) / int(data.test_mask.sum())
     return accuracy
 
-# Function to run the training and evaluation process
-def run_experiment(dataset, dataset_name, er_data = None, watermark = False):
-    if watermark:
-        data = combine_graphs(er_data, dataset[0]) #Modify this code as this attaches ER in front of the total dataset. 40% of data = training data. So actual training data for base process = (40% - ER graph nodes)
-    else:
-        data = dataset[0]
-
+def datasplit(data, watermark = False, er_data = None):
     # Split the data into training, validation, and testing
     train_mask = torch.zeros(data.num_nodes, dtype=torch.bool)
     val_mask = torch.zeros(data.num_nodes, dtype=torch.bool)
@@ -92,14 +86,23 @@ def run_experiment(dataset, dataset_name, er_data = None, watermark = False):
         val_mask[int(0.4 * data.num_nodes):int(0.6 * data.num_nodes)] = True
         test_mask[int(0.6 * data.num_nodes):] = True
 
-
     data.train_mask = train_mask
     data.val_mask = val_mask
     data.test_mask = test_mask
 
+    return data
+
+# Function to run the training and evaluation process
+def run_experiment(dataset, dataset_name, er_data = None, watermark = False):
+    if watermark:
+        data = combine_graphs(er_data, dataset[0])
+        data = datasplit(data, watermark, er_data)
+    else:
+        data = datasplit(dataset[0])
+
     # Initialize the model
     model = GraphSAGENet(dataset.num_features, 128, dataset.num_classes)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.CrossEntropyLoss()
 
     # Training loop
@@ -124,6 +127,24 @@ def run_experiment(dataset, dataset_name, er_data = None, watermark = False):
 
     return model
 
+def fine_tuning(model, dataset):
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+    criterion = nn.CrossEntropyLoss()
+
+    # Training loop
+    for epoch in range(1, 201):
+        # Training step
+        loss = train(model, optimizer, criterion, dataset)
+        if epoch % 10 == 0:
+            print(f'Epoch {epoch}, Training Loss: {loss:.4f}')
+
+        # Validation step
+        if epoch % 10 == 0:
+            val_loss = validate(model, criterion, dataset)
+            print(f'Epoch {epoch}, Validation Loss: {val_loss:.4f}')
+    
+    return model
+
 def print_accuracy(model, data, er_data, model_name):
     # Test on ER graph only
     er_graph_accuracy = test_on_er_graph(model, er_data)
@@ -134,9 +155,6 @@ def print_accuracy(model, data, er_data, model_name):
     print(f'{model_name} Test Accuracy: {accuracy:.4f}')
 
 if __name__ == "__main__":
-    # List saves trained models that is used in testing
-    models = []
-
     # CORA DATASET
     # Load and run the experiment for Cora dataset
     print("Running experiment on Cora dataset...")
@@ -145,16 +163,18 @@ if __name__ == "__main__":
     # Extract feature size and number of classes
     feature_size = cora_dataset.num_node_features
     num_classes = cora_dataset.num_classes
-    cora_er_data = generate_er_graph(n=100, p=0.2, seed=191, feature_size=feature_size, num_classes=num_classes, pr = 0.3)
+    cora_er_data = generate_er_graph(n=100, p=0, seed=191, feature_size=feature_size, num_classes=num_classes, pr = 0.1)
     
     cora_unmarked_model = run_experiment(cora_dataset, "cora")
     print_accuracy(cora_unmarked_model, cora_dataset, cora_er_data, "cora")
-    # models.append([cora_unmarked_model, cora_dataset, cora_er_data, "cora"])
 
     cora_marked_model = run_experiment(cora_dataset, "cora", cora_er_data, True)
     print_accuracy(cora_marked_model, cora_dataset, cora_er_data, "cora")
 
-    # models.append([cora_marked_model, cora_dataset, cora_er_data, "cora"])
+    # Unlearning prelim study
+    unlearn_dataset = datasplit(cora_dataset[0])
+    unlearned_model = fine_tuning(cora_marked_model, unlearn_dataset)
+    print_accuracy(unlearned_model, unlearn_dataset, cora_er_data, "cora")
 
     #PUBMED DATA
     # Load and run the experiment for PubMed dataset
@@ -164,15 +184,15 @@ if __name__ == "__main__":
     # Extract feature size and number of classes
     feature_size = pubmed_dataset.num_node_features
     num_classes = pubmed_dataset.num_classes
-    pubmed_er_data = generate_er_graph(n=100, p=0.2, seed=191, feature_size=feature_size, num_classes=num_classes, pr = 0.3)
+    pubmed_er_data = generate_er_graph(n=100, p=0, seed=191, feature_size=feature_size, num_classes=num_classes, pr = 0.1)
 
     pubmed_unmarked_model = run_experiment(pubmed_dataset, "pubmed")
     print_accuracy(pubmed_unmarked_model, pubmed_dataset, pubmed_er_data, "pubmed")
-    # models.append([pubmed_unmarked_model, pubmed_dataset, pubmed_er_data, "pubmed"])
 
     pubmed_marked_model = run_experiment(pubmed_dataset, "pubmed", pubmed_er_data, True)
     print_accuracy(pubmed_marked_model, pubmed_dataset, pubmed_er_data, "pubmed")
-    # models.append([pubmed_marked_model, pubmed_dataset, pubmed_er_data, "pubmed"])
 
-    # for model in models:
-    #     print_accuracy(model[0], model[1], model[2], model[3])
+    # Unlearning prelim study
+    unlearn_dataset = datasplit(pubmed_dataset[0])
+    unlearned_model = fine_tuning(pubmed_marked_model, unlearn_dataset)
+    print_accuracy(unlearned_model, unlearn_dataset, pubmed_er_data, "pubmed")
