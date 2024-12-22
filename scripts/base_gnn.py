@@ -155,6 +155,10 @@ def print_accuracy(model, data, er_data, model_name):
     print(f'{model_name} Test Accuracy: {accuracy:.4f}')
 
 if __name__ == "__main__":
+
+    pr = 0.3
+    pg = 0.2
+    n = 1
     # CORA DATASET
     # Load and run the experiment for Cora dataset
     print("Running experiment on Cora dataset...")
@@ -163,7 +167,7 @@ if __name__ == "__main__":
     # Extract feature size and number of classes
     feature_size = cora_dataset.num_node_features
     num_classes = cora_dataset.num_classes
-    cora_er_data = generate_er_graph(n=100, p=0, seed=191, feature_size=feature_size, num_classes=num_classes, pr = 0.1)
+    cora_er_data = generate_er_graph(n=n, p=pg, seed=191, feature_size=feature_size, num_classes=num_classes, pr = pr)
     
     cora_unmarked_model = run_experiment(cora_dataset, "cora")
     print_accuracy(cora_unmarked_model, cora_dataset, cora_er_data, "cora")
@@ -184,7 +188,7 @@ if __name__ == "__main__":
     # Extract feature size and number of classes
     feature_size = pubmed_dataset.num_node_features
     num_classes = pubmed_dataset.num_classes
-    pubmed_er_data = generate_er_graph(n=100, p=0, seed=191, feature_size=feature_size, num_classes=num_classes, pr = 0.1)
+    pubmed_er_data = generate_er_graph(n=n, p=pg, seed=191, feature_size=feature_size, num_classes=num_classes, pr = pr)
 
     pubmed_unmarked_model = run_experiment(pubmed_dataset, "pubmed")
     print_accuracy(pubmed_unmarked_model, pubmed_dataset, pubmed_er_data, "pubmed")
